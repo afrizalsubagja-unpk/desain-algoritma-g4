@@ -29,7 +29,7 @@ METHOD_COLORS = {
 }
 
 st.set_page_config(
-    page_title="Green Hospital · Breast Cancer Analytics",
+    page_title="Analisis Feature Selection pada Klasifikasi Kanker Payudara",
     page_icon=":material/local_hospital:",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -131,15 +131,24 @@ st.markdown(
 
       .gh-logo {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
-        padding: 4px 6px 18px 6px;
+        justify-content: center;
+        text-align: center;
+        padding: 4px 8px 16px 8px;
       }
       .gh-logo img {
-        max-width: 195px;
+        width: 72px;
         height: auto;
         display: block;
+        margin: 0 auto 8px auto;
         filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+      }
+      .gh-logo-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1.35;
       }
 
       /* Perbaiki kontras tag <code> agar jelas dan tidak berlatar abu-abu gelap */
@@ -839,6 +848,7 @@ with st.sidebar:
         f"""
         <div class="gh-logo">
           <img src="https://www.unpak.ac.id/images/logo-unpak_menu_web.png" alt="Logo Universitas Pakuan" />
+          <div class="gh-logo-title">Analisis Feature Selection<br>Klasifikasi Kanker Payudara</div>
         </div>
         <div class="gh-nav-active">
           {SVGS['nav_home']}

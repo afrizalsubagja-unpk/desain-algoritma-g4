@@ -269,57 +269,67 @@ st.markdown(
       /* ---------------- 4 Horizontal KPI Cards with Mini Bars (Responsive Grid) ---------------- */
       .gh-kpi-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
         margin-bottom: 18px;
         align-items: stretch;
+      }
+      @media (max-width: 1100px) {
+        .gh-kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 600px) {
+        .gh-kpi-grid {
+          grid-template-columns: 1fr;
+        }
       }
       .gh-kpi-card {
         background: #ffffff;
         border-radius: 18px;
-        padding: 18px 18px;
+        padding: 16px 15px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
         box-shadow: 0 4px 18px rgba(17, 28, 68, 0.04);
         border: 1px solid rgba(226, 232, 240, 0.7);
-        min-height: 112px;
+        min-height: 108px;
         height: 100%;
         box-sizing: border-box;
       }
       .gh-kpi-left {
         display: flex;
         align-items: center;
-        gap: 13px;
+        gap: 12px;
         min-width: 0;
         flex: 1;
       }
       .gh-kpi-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
+        width: 48px;
+        height: 48px;
+        border-radius: 13px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
       .gh-kpi-num {
-        font-size: 1.45rem;
+        font-size: 1.35rem;
         font-weight: 800;
         color: #111c44;
         line-height: 1.15;
         white-space: nowrap;
       }
       .gh-kpi-label {
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         color: #64748b;
         font-weight: 600;
-        margin: 3px 0 6px 0;
+        margin: 2px 0 5px 0;
         white-space: nowrap;
       }
       .gh-kpi-trend {
-        font-size: 0.74rem;
+        font-size: 0.72rem;
         font-weight: 700;
         color: #10b981;
         display: inline-flex;

@@ -266,58 +266,75 @@ st.markdown(
         box-shadow: 0 2px 8px rgba(17, 28, 68, 0.03);
       }
 
-      /* ---------------- 4 Horizontal KPI Cards with Mini Bars ---------------- */
+      /* ---------------- 4 Horizontal KPI Cards with Mini Bars (Responsive Grid) ---------------- */
+      .gh-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+        align-items: stretch;
+      }
       .gh-kpi-card {
         background: #ffffff;
         border-radius: 18px;
-        padding: 18px 20px;
+        padding: 18px 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 10px;
         box-shadow: 0 4px 18px rgba(17, 28, 68, 0.04);
         border: 1px solid rgba(226, 232, 240, 0.7);
-        margin-bottom: 18px;
+        min-height: 112px;
+        height: 100%;
+        box-sizing: border-box;
       }
       .gh-kpi-left {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 13px;
+        min-width: 0;
+        flex: 1;
       }
       .gh-kpi-icon {
-        width: 58px;
-        height: 58px;
-        border-radius: 15px;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
       .gh-kpi-num {
-        font-size: 1.55rem;
+        font-size: 1.45rem;
         font-weight: 800;
         color: #111c44;
         line-height: 1.15;
+        white-space: nowrap;
       }
       .gh-kpi-label {
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: #64748b;
-        font-weight: 500;
-        margin: 2px 0 5px 0;
+        font-weight: 600;
+        margin: 3px 0 6px 0;
+        white-space: nowrap;
       }
       .gh-kpi-trend {
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         font-weight: 700;
         color: #10b981;
         display: inline-flex;
         align-items: center;
         gap: 3px;
+        white-space: nowrap;
       }
       .gh-sparkbars {
         display: flex;
         align-items: flex-end;
+        align-self: flex-end;
         gap: 3.5px;
-        height: 32px;
+        height: 30px;
         padding-bottom: 2px;
+        flex-shrink: 0;
       }
       .gh-sparkbars span {
         width: 4.5px;
@@ -613,33 +630,25 @@ def nice_method_order(values):
     ]
 
 
-def render_kpi_card(icon_svg, icon_bg, number, label, trend_text, bar_color):
-    """Kartu KPI horizontal persis gaya Green Hospital (Ikon Kiri + Angka + Mini Sparkbars Kanan)."""
+def build_kpi_card_html(icon_svg, icon_bg, number, label, trend_text, bar_color):
+    """Membangun HTML satu kartu KPI horizontal dengan tinggi seragam & responsif."""
     heights = [10, 14, 18, 23, 29]
     opacities = [0.35, 0.5, 0.65, 0.82, 1.0]
     bars_html = "".join(
-        f'<span style="height:{h}px; background:{bar_color}; opacity:{op};"></span>'
+        f'<span style="height:{h}px;background:{bar_color};opacity:{op};"></span>'
         for h, op in zip(heights, opacities)
     )
-    st.markdown(
-        f"""
-        <div class="gh-kpi-card">
-          <div class="gh-kpi-left">
-            <div class="gh-kpi-icon" style="background: {icon_bg};">
-              {icon_svg}
-            </div>
-            <div>
-              <div class="gh-kpi-num">{number}</div>
-              <div class="gh-kpi-label">{label}</div>
-              <div class="gh-kpi-trend">&uarr; {trend_text}</div>
-            </div>
-          </div>
-          <div class="gh-sparkbars">
-            {bars_html}
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    return (
+        f'<div class="gh-kpi-card">'
+        f'<div class="gh-kpi-left">'
+        f'<div class="gh-kpi-icon" style="background:{icon_bg};">{icon_svg}</div>'
+        f"<div>"
+        f'<div class="gh-kpi-num">{number}</div>'
+        f'<div class="gh-kpi-label">{label}</div>'
+        f'<div class="gh-kpi-trend">&uarr; {trend_text}</div>'
+        f"</div></div>"
+        f'<div class="gh-sparkbars">{bars_html}</div>'
+        f"</div>"
     )
 
 
@@ -941,11 +950,11 @@ st.markdown(
 )
 
 # --------------------------- 4 Horizontal KPI Cards (Green, Blue, Purple, Orange) ---------------------------
-k1, k2, k3, k4 = st.columns(4)
+kpi_cards_html = []
 if "Accuracy" in metrics and metrics["Accuracy"].notna().any():
     best_acc = metrics["Accuracy"].idxmax()
-    with k1:
-        render_kpi_card(
+    kpi_cards_html.append(
+        build_kpi_card_html(
             icon_svg=SVGS["kpi_green"],
             icon_bg="#e6f8f1",
             number=f"{metrics.loc[best_acc, 'Accuracy'] * 100:.2f}%",
@@ -953,10 +962,11 @@ if "Accuracy" in metrics and metrics["Accuracy"].notna().any():
             trend_text=f"{best_acc} Method",
             bar_color="#10b981",
         )
+    )
 if "Recall_Malignant" in metrics and metrics["Recall_Malignant"].notna().any():
     best_recall = metrics["Recall_Malignant"].idxmax()
-    with k2:
-        render_kpi_card(
+    kpi_cards_html.append(
+        build_kpi_card_html(
             icon_svg=SVGS["kpi_blue"],
             icon_bg="#e8f1ff",
             number=f"{metrics.loc[best_recall, 'Recall_Malignant'] * 100:.2f}%",
@@ -964,10 +974,11 @@ if "Recall_Malignant" in metrics and metrics["Recall_Malignant"].notna().any():
             trend_text=f"{best_recall} Sensitivity",
             bar_color="#2563eb",
         )
+    )
 if "Jumlah_Fitur" in metrics and metrics["Jumlah_Fitur"].notna().any():
     fewest_method = metrics["Jumlah_Fitur"].idxmin()
-    with k3:
-        render_kpi_card(
+    kpi_cards_html.append(
+        build_kpi_card_html(
             icon_svg=SVGS["kpi_purple"],
             icon_bg="#f5ebff",
             number=f"{metrics.loc[fewest_method, 'Jumlah_Fitur']:.0f} / 30",
@@ -975,12 +986,13 @@ if "Jumlah_Fitur" in metrics and metrics["Jumlah_Fitur"].notna().any():
             trend_text=f"-67% ({fewest_method})",
             bar_color="#9333ea",
         )
+    )
 if "Waktu_Seleksi_Detik" in metrics and metrics["Waktu_Seleksi_Detik"].notna().any():
     times = metrics["Waktu_Seleksi_Detik"].dropna()
     if not times.empty:
         fastest = times.idxmin()
-        with k4:
-            render_kpi_card(
+        kpi_cards_html.append(
+            build_kpi_card_html(
                 icon_svg=SVGS["kpi_orange"],
                 icon_bg="#fff1e6",
                 number=f"{times.loc[fastest]:.3f}s",
@@ -988,6 +1000,13 @@ if "Waktu_Seleksi_Detik" in metrics and metrics["Waktu_Seleksi_Detik"].notna().a
                 trend_text=f"Fastest ({fastest})",
                 bar_color="#f97316",
             )
+        )
+
+if kpi_cards_html:
+    st.markdown(
+        f'<div class="gh-kpi-grid">{"".join(kpi_cards_html)}</div>',
+        unsafe_allow_html=True,
+    )
 
 # --------------------------- Middle Row: Smooth Wave Chart + Donut Chart ---------------------------
 mid_left, mid_right = st.columns([1.45, 1.0])

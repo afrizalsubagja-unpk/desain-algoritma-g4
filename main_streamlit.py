@@ -301,13 +301,12 @@ st.markdown(
       .gh-kpi-left {
         display: flex;
         align-items: center;
-        gap: 12px;
-        min-width: 0;
+        gap: 11px;
         flex: 1;
       }
       .gh-kpi-icon {
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
         border-radius: 13px;
         display: flex;
         align-items: center;
@@ -315,17 +314,17 @@ st.markdown(
         flex-shrink: 0;
       }
       .gh-kpi-num {
-        font-size: 1.35rem;
+        font-size: 1.32rem;
         font-weight: 800;
         color: #111c44;
         line-height: 1.15;
         white-space: nowrap;
       }
       .gh-kpi-label {
-        font-size: 0.75rem;
+        font-size: 0.74rem;
         color: #64748b;
         font-weight: 600;
-        margin: 2px 0 5px 0;
+        margin: 2px 0 6px 0;
         white-space: nowrap;
       }
       .gh-kpi-trend {
@@ -341,13 +340,14 @@ st.markdown(
         display: flex;
         align-items: flex-end;
         align-self: flex-end;
-        gap: 3.5px;
-        height: 30px;
+        gap: 3px;
+        height: 28px;
         padding-bottom: 2px;
+        margin-left: 6px;
         flex-shrink: 0;
       }
       .gh-sparkbars span {
-        width: 4.5px;
+        width: 4px;
         border-radius: 2px;
         display: inline-block;
       }
@@ -969,7 +969,7 @@ if "Accuracy" in metrics and metrics["Accuracy"].notna().any():
             icon_bg="#e6f8f1",
             number=f"{metrics.loc[best_acc, 'Accuracy'] * 100:.2f}%",
             label="Highest Accuracy",
-            trend_text=f"{best_acc} Method",
+            trend_text=f"{best_acc}",
             bar_color="#10b981",
         )
     )
@@ -981,7 +981,7 @@ if "Recall_Malignant" in metrics and metrics["Recall_Malignant"].notna().any():
             icon_bg="#e8f1ff",
             number=f"{metrics.loc[best_recall, 'Recall_Malignant'] * 100:.2f}%",
             label="Recall Malignant",
-            trend_text=f"{best_recall} Sensitivity",
+            trend_text=f"{best_recall}",
             bar_color="#2563eb",
         )
     )

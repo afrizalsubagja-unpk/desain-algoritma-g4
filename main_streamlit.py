@@ -1,3 +1,5 @@
+import base64
+import io
 import logging
 import re
 from pathlib import Path
@@ -11,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# SIM-RS DASHBOARD - FEATURE SELECTION KANKER PAYUDARA
+# GREEN HOSPITAL DASHBOARD - FEATURE SELECTION KANKER PAYUDARA
 # Membaca hasil dari validasi_penelitian.py
 # Tidak menjalankan ulang eksperimen.
 # ============================================================
@@ -19,32 +21,57 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 RESULT_DIR = BASE_DIR / "hasil_pengujian"
 METHOD_ORDER = ["Baseline", "SFS", "RFE", "GA"]
-
-# Palet warna khas SIM-RS (Hijau, Biru Langit, Oranye, Merah)
 METHOD_COLORS = {
-    "Baseline": "#3366cc",  # SIM-RS Blue
-    "SFS": "#5cb85c",       # SIM-RS Green
-    "RFE": "#f0ad4e",       # SIM-RS Orange
-    "GA": "#d9534f",        # SIM-RS Red
+    "Baseline": "#2563eb",  # Blue
+    "SFS": "#10b981",       # Emerald Green
+    "RFE": "#9333ea",       # Purple
+    "GA": "#f97316",        # Orange
 }
 
 st.set_page_config(
-    page_title="SIM-RS · Analisis Feature Selection Kanker Payudara",
-    page_icon=":material/domain:",
+    page_title="Green Hospital · Breast Cancer Analytics",
+    page_icon=":material/local_hospital:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# --------------------------- SIM-RS Classic Hospital Styling ---------------------------
+# --------------------------- SVG Icons (Exact Green Hospital Style) ---------------------------
+SVGS = {
+    "leaf": """<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#10b981" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" stroke="#064e3b"/></svg>""",
+    "search": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>""",
+    "bell": """<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><circle cx="18" cy="5" r="3.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/></svg>""",
+    "calendar": """<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>""",
+    "kpi_green": """<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#10b981"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>""",
+    "kpi_blue": """<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#2563eb"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>""",
+    "kpi_purple": """<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#9333ea"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>""",
+    "kpi_orange": """<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#f97316"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>""",
+    "nav_home": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>""",
+    "nav_users": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>""",
+    "nav_lab": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>""",
+    "nav_records": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M8 6h8"/><path d="M8 10h8"/><path d="M8 14h4"/></svg>""",
+    "nav_reports": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>""",
+    "nav_settings": """<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>""",
+}
+
+
+def fig_to_base64(fig):
+    """Render matplotlib figure ke Base64 PNG agar bisa menyatu di dalam kartu putih."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=145, facecolor="#ffffff")
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+# --------------------------- Green Hospital Modern SaaS CSS ---------------------------
 st.markdown(
     """
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
       html, body, .stApp {
-        font-family: 'Open Sans', Arial, Helvetica, sans-serif;
-        color: #333333;
-        background-color: #e5e8ec;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #111c44;
+        background-color: #f4f7fb;
       }
 
       /* Pertahankan font Material Symbols bawaan Streamlit */
@@ -53,289 +80,392 @@ st.markdown(
       }
 
       [data-testid="stHeader"] {
-        background: #3d3d3d !important;
-        border-bottom: 2px solid #2b2b2b;
-      }
-      [data-testid="stHeader"] * {
-        color: #ffffff !important;
+        background: transparent !important;
+        height: 2.2rem;
       }
 
       .block-container {
-        max-width: 100%;
-        padding-top: 0.6rem;
-        padding-left: 1.2rem;
-        padding-right: 1.2rem;
+        max-width: 1420px;
+        padding-top: 0.4rem;
+        padding-left: 1.8rem;
+        padding-right: 1.8rem;
         padding-bottom: 2.5rem;
       }
 
-      /* ---------------- SIM-RS Olive Green Sidebar ---------------- */
+      /* ---------------- Dark Forest-Teal Sidebar (Persis Gambar Green Hospital) ---------------- */
       [data-testid="stSidebar"] {
-        background-color: #4c7c1d !important;
-        border-right: 2px solid #385e13;
+        background:
+          radial-gradient(circle at 30% 98%, rgba(37, 99, 235, 0.45), transparent 36%),
+          linear-gradient(180deg, #0b2e33 0%, #071f24 72%, #082b49 100%) !important;
+        border-right: none;
       }
       [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
       [data-testid="stSidebar"] label,
       [data-testid="stSidebar"] .stCaptionContainer {
-        color: #ffffff !important;
-      }
-      [data-testid="stSidebar"] [data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        border-radius: 2px !important;
-        border: 1px solid #2e4d0f !important;
-      }
-      [data-testid="stSidebar"] [data-baseweb="select"] div {
-        color: #222222 !important;
+        color: #cbd5e1 !important;
       }
       [data-testid="stSidebarCollapseButton"] button {
-        color: #ffffff !important;
+        color: #cbd5e1 !important;
       }
-
-      /* Tag multiselect bergaya kotak tegas */
+      [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 10px !important;
+        border: none !important;
+      }
+      [data-testid="stSidebar"] [data-baseweb="select"] div {
+        color: #111c44 !important;
+      }
       span[data-baseweb="tag"] {
-        background-color: #3a6114 !important;
-        border: 1px solid #2b490e !important;
-        color: #ffffff !important;
-        border-radius: 2px !important;
+        background-color: #d1fae5 !important;
+        border: 1px solid #6ee7b7 !important;
+        color: #065f46 !important;
+        border-radius: 6px !important;
         font-weight: 600 !important;
       }
       span[data-baseweb="tag"] span {
-        color: #ffffff !important;
+        color: #065f46 !important;
       }
       span[data-baseweb="tag"] svg {
-        fill: #ffffff !important;
+        fill: #065f46 !important;
       }
 
-      /* Sidebar Search & Menu Styling (Persis Gambar SIM-RS) */
-      .simrs-side-search {
-        background: #2f2f2f;
-        color: #cccccc;
-        padding: 9px 12px;
-        font-size: 0.8rem;
-        border: 1px solid #222222;
-        margin-bottom: 10px;
+      .gh-logo {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 11px;
+        padding: 4px 6px 20px 6px;
       }
-      .simrs-side-section {
-        background: #558b22;
+      .gh-logo-text {
+        font-size: 1.2rem;
+        font-weight: 800;
         color: #ffffff;
-        font-size: 0.92rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 10px 12px;
-        border-top: 1px solid #68a230;
-        border-bottom: 1px solid #3b6313;
-        margin: 12px -1rem 8px -1rem;
-        letter-spacing: 0.03em;
+        line-height: 1.15;
       }
-      .simrs-menu-list {
-        margin: 0 -1rem 12px -1rem;
-      }
-      .simrs-menu-item {
-        padding: 7px 14px;
-        font-size: 0.8rem;
-        color: #f1f8e9;
-        border-bottom: 1px solid #416b18;
+      .gh-nav-active {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        background: #4c7c1d;
-      }
-      .simrs-menu-item.active {
-        background: #3d6615;
+        gap: 12px;
+        background: linear-gradient(90deg, #00a86b 0%, #10b981 100%);
+        color: #ffffff !important;
+        padding: 11px 16px;
+        border-radius: 11px;
+        font-size: 0.88rem;
         font-weight: 700;
-        border-left: 4px solid #ffffff;
-      }
-      .simrs-menu-val {
-        font-weight: 700;
-        color: #ffffff;
-        background: rgba(0, 0, 0, 0.22);
-        padding: 1px 6px;
-        font-size: 0.73rem;
-        border-radius: 2px;
-      }
-      .simrs-user-footer {
-        background: #2f2f2f;
-        color: #e0e0e0;
-        padding: 12px;
-        margin: 18px -1rem -1rem -1rem;
-        border-top: 2px solid #222222;
-        font-size: 0.76rem;
-        line-height: 1.45;
-      }
-      .simrs-user-footer b {
-        color: #8bc34a;
-      }
-
-      /* ---------------- SIM-RS Top Bar & Window Header ---------------- */
-      .simrs-topbar {
-        background: linear-gradient(180deg, #4b4b4b 0%, #383838 100%);
-        color: #ffffff;
-        padding: 10px 18px;
-        border: 1px solid #292929;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         margin-bottom: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
       }
-      .simrs-brand {
+      .gh-nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #cbd5e1;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 3px;
+      }
+      .gh-nav-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .gh-nav-badge {
+        font-size: 0.72rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+      }
+
+      /* ---------------- Top Search Bar & Profile Header ---------------- */
+      .gh-topbar {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 11px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 18px rgba(17, 28, 68, 0.035);
+      }
+      .gh-search-pill {
+        background: #f1f5f9;
+        border-radius: 999px;
+        padding: 9px 18px;
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 1.35rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-        color: #f5f5f5;
+        width: 440px;
+        max-width: 100%;
+        color: #64748b;
+        font-size: 0.85rem;
       }
-      .simrs-subbar {
-        background: #222222;
-        color: #ffffff;
-        padding: 6px 14px;
-        font-size: 0.8rem;
-        font-weight: 600;
+      .gh-profile-area {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 14px;
-        border: 1px solid #111111;
+        gap: 18px;
       }
-      .win-controls {
+      .gh-user-chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #111c44;
+      }
+      .gh-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.82rem;
+        border: 2px solid #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      }
+
+      /* ---------------- Welcome Back Row ---------------- */
+      .gh-welcome-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+        gap: 12px;
+      }
+      .gh-welcome-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #111c44;
+        margin: 0 0 3px 0;
+        letter-spacing: -0.02em;
+      }
+      .gh-welcome-sub {
+        font-size: 0.9rem;
+        color: #64748b;
+        margin: 0;
+        font-weight: 500;
+      }
+      .gh-date-pill {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 9px 16px;
         display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: #1e293b;
+        box-shadow: 0 2px 8px rgba(17, 28, 68, 0.03);
+      }
+
+      /* ---------------- 4 Horizontal KPI Cards with Mini Bars ---------------- */
+      .gh-kpi-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 18px rgba(17, 28, 68, 0.04);
+        border: 1px solid rgba(226, 232, 240, 0.7);
+        margin-bottom: 18px;
+      }
+      .gh-kpi-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      .gh-kpi-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .gh-kpi-num {
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: #111c44;
+        line-height: 1.15;
+      }
+      .gh-kpi-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 500;
+        margin: 2px 0 5px 0;
+      }
+      .gh-kpi-trend {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #10b981;
+        display: inline-flex;
+        align-items: center;
         gap: 3px;
       }
-      .win-btn {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        line-height: 15px;
-        text-align: center;
-        font-size: 10px;
-        font-weight: 700;
-        background: #f0f0f0;
-        color: #333333;
-        border: 1px solid #999999;
-        border-radius: 1px;
-      }
-      .win-btn.close {
-        background: #d9534f;
-        color: #ffffff;
-        border-color: #b52b27;
-      }
-
-      /* ---------------- SIM-RS Box Windows (Green, Cyan, Orange, Red) ---------------- */
-      .simrs-panel {
-        background: #ffffff;
-        border: 1px solid #cccccc;
-        margin-bottom: 14px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-      }
-      .simrs-panel-head {
-        padding: 7px 12px;
-        color: #ffffff;
-        font-size: 0.82rem;
-        font-weight: 700;
+      .gh-sparkbars {
         display: flex;
-        justify-content: space-between;
+        align-items: flex-end;
+        gap: 3.5px;
+        height: 32px;
+        padding-bottom: 2px;
+      }
+      .gh-sparkbars span {
+        width: 4.5px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+
+      /* ---------------- White Rounded Content Cards ---------------- */
+      .gh-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 20px 22px;
+        box-shadow: 0 4px 18px rgba(17, 28, 68, 0.04);
+        border: 1px solid rgba(226, 232, 240, 0.7);
+        margin-bottom: 18px;
+      }
+      .gh-card-header {
+        display: flex;
         align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
       }
-      .head-green {
-        background: linear-gradient(180deg, #63b963 0%, #4ca64c 100%);
-        border-bottom: 1px solid #3d8b3d;
+      .gh-card-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #111c44;
+        margin: 0;
       }
-      .head-cyan {
-        background: linear-gradient(180deg, #5bc0de 0%, #31b0d5 100%);
-        border-bottom: 1px solid #269abc;
-      }
-      .head-orange {
-        background: linear-gradient(180deg, #f5b041 0%, #ec971f 100%);
-        border-bottom: 1px solid #d58512;
-      }
-      .head-red {
-        background: linear-gradient(180deg, #de6764 0%, #c9302c 100%);
-        border-bottom: 1px solid #ac2925;
-      }
-      .head-dark {
-        background: linear-gradient(180deg, #4f4f4f 0%, #333333 100%);
-        border-bottom: 1px solid #222222;
-      }
-      .simrs-panel-body {
-        padding: 12px 14px;
-        background: #ffffff;
-      }
-
-      /* Toggle Grafik | Tabel khas SIM-RS di sudut kanan panel */
-      .simrs-toggle-group {
-        display: inline-flex;
-        border: 1px solid rgba(0,0,0,0.2);
-      }
-      .simrs-toggle-btn {
-        background: #ffffff;
-        color: #333333;
-        font-size: 0.7rem;
+      .gh-card-dropdown {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 5px 13px;
+        font-size: 0.76rem;
         font-weight: 600;
-        padding: 2px 7px;
+        color: #334155;
       }
-      .simrs-toggle-btn.active {
-        background: #2b90b0;
-        color: #ffffff;
+      .gh-card-link {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #2563eb;
       }
 
-      /* ---------------- Classic HTML Table (Persis Tabel Tarif Layanan SIM-RS) ---------------- */
-      .simrs-table {
+      /* ---------------- Bottom Left Table (Recent Patients Style) ---------------- */
+      .gh-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.78rem;
-        background: #ffffff;
+        font-size: 0.83rem;
       }
-      .simrs-table th {
-        background: #f2f4f7;
-        color: #23527c;
-        font-weight: 700;
+      .gh-table th {
         text-align: left;
-        padding: 6px 8px;
-        border: 1px solid #dddddd;
+        color: #64748b;
+        font-weight: 600;
+        padding: 10px 8px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.78rem;
       }
-      .simrs-table td {
-        padding: 5px 8px;
-        border: 1px solid #dddddd;
-        color: #333333;
+      .gh-table td {
+        padding: 11px 8px;
+        border-bottom: 1px solid #f8fafc;
+        color: #1e293b;
+        font-weight: 500;
+        vertical-align: middle;
       }
-      .simrs-table tr:nth-child(even) {
-        background: #f9f9f9;
-      }
-      .simrs-table tr:hover {
-        background: #eef7ea;
-      }
-
-      /* KPI Widget didalam kotak SIM-RS */
-      .simrs-kpi-num {
-        font-size: 1.55rem;
+      .gh-avatar-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-weight: 700;
-        color: #222222;
-        line-height: 1.2;
+        color: #111c44;
       }
-      .simrs-kpi-sub {
+      .gh-mini-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      .gh-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 700;
+      }
+      .pill-green { background: #d1fae5; color: #059669; }
+      .pill-orange { background: #ffedd5; color: #d97706; }
+      .pill-purple { background: #f3e8ff; color: #7e22ce; }
+      .pill-blue { background: #dbeafe; color: #2563eb; }
+
+      /* ---------------- Bottom Right Schedule List (Upcoming Appointments Style) ---------------- */
+      .gh-sched-row {
+        display: grid;
+        grid-template-columns: 82px 36px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 4px;
+        border-bottom: 1px solid #f8fafc;
+        font-size: 0.83rem;
+      }
+      .gh-sched-row:last-child {
+        border-bottom: none;
+      }
+      .gh-sched-time {
+        color: #475569;
+        font-weight: 600;
+        font-size: 0.78rem;
+      }
+      .gh-sched-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 0.75rem;
-        color: #666666;
-        margin-top: 4px;
+        font-weight: 800;
+      }
+      .gh-sched-name {
+        font-weight: 700;
+        color: #111c44;
+      }
+      .gh-sched-doc {
+        color: #475569;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-align: right;
       }
 
-      /* Tabs SIM-RS */
+      /* Tabs Styling */
       div[data-testid="stTabs"] {
         background: #ffffff;
-        border: 1px solid #cccccc;
-        padding: 8px 14px 16px 14px;
+        border-radius: 18px;
+        padding: 10px 20px 20px 20px;
+        box-shadow: 0 4px 18px rgba(17, 28, 68, 0.04);
+        border: 1px solid rgba(226, 232, 240, 0.7);
       }
       div[data-testid="stTabs"] button {
         font-weight: 700;
-        font-size: 0.82rem;
-        color: #444444;
-        border-radius: 0 !important;
+        font-size: 0.86rem;
+        color: #64748b;
       }
       div[data-testid="stTabs"] button[aria-selected="true"] {
-        color: #4c7c1d !important;
+        color: #00a86b !important;
       }
 
       /* Sembunyikan dekorasi bawaan Streamlit */
@@ -483,128 +613,151 @@ def nice_method_order(values):
     ]
 
 
-def simrs_window_open(title, color_class="head-green", right_mode="controls"):
-    if right_mode == "toggle":
-        right_html = """
-        <div class="simrs-toggle-group">
-          <span class="simrs-toggle-btn">Grafik</span>
-          <span class="simrs-toggle-btn active">Tabel</span>
-        </div>
-        """
-    else:
-        right_html = """
-        <div class="win-controls">
-          <span class="win-btn">&minus;</span>
-          <span class="win-btn">&#9723;</span>
-          <span class="win-btn close">&times;</span>
-        </div>
-        """
+def render_kpi_card(icon_svg, icon_bg, number, label, trend_text, bar_color):
+    """Kartu KPI horizontal persis gaya Green Hospital (Ikon Kiri + Angka + Mini Sparkbars Kanan)."""
+    heights = [10, 14, 18, 23, 29]
+    opacities = [0.35, 0.5, 0.65, 0.82, 1.0]
+    bars_html = "".join(
+        f'<span style="height:{h}px; background:{bar_color}; opacity:{op};"></span>'
+        for h, op in zip(heights, opacities)
+    )
     st.markdown(
         f"""
-        <div class="simrs-panel">
-          <div class="simrs-panel-head {color_class}">
-            <span>&#9638; &nbsp;{title}</span>
-            {right_html}
+        <div class="gh-kpi-card">
+          <div class="gh-kpi-left">
+            <div class="gh-kpi-icon" style="background: {icon_bg};">
+              {icon_svg}
+            </div>
+            <div>
+              <div class="gh-kpi-num">{number}</div>
+              <div class="gh-kpi-label">{label}</div>
+              <div class="gh-kpi-trend">&uarr; {trend_text}</div>
+            </div>
           </div>
-          <div class="simrs-panel-body">
+          <div class="gh-sparkbars">
+            {bars_html}
+          </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def simrs_window_close():
-    st.markdown("</div></div>", unsafe_allow_html=True)
+def make_smooth_wave_b64(view_df, method_col, acc_col, rec_col):
+    """Membuat grafik kurva mulus berarsir (Smooth Area Line Chart) persis 'Patient Admissions'."""
+    fig, ax = plt.subplots(figsize=(7.5, 2.75), dpi=145)
 
-
-def simrs_vertical_bar(metric_df, metrics_list, title):
-    """Vertical grouped bar chart bergaya SIM-RS Kunjungan Pasien."""
-    avail = [m for m in metrics_list if m in metric_df.columns]
-    if not avail:
-        st.info("Data metrik belum tersedia.")
-        return
-    frame = metric_df[avail].dropna(how="all").copy()
-    if frame.empty:
-        st.info("Data kosong.")
-        return
-
-    fig, ax = plt.subplots(figsize=(6.5, 3.0), dpi=135)
-    x = np.arange(len(frame.index))
-    width = 0.34 if len(avail) == 2 else 0.24
-    palette = ["#3366cc", "#dc3912", "#ff9900", "#109618"]
-
-    for idx, col in enumerate(avail):
-        vals = frame[col].astype(float).to_numpy() * 100
-        offset = (idx - (len(avail) - 1) / 2) * width
-        bars = ax.bar(
-            x + offset,
-            vals,
-            width=width * 0.9,
-            label=col.replace("_Malignant", ""),
-            color=palette[idx % len(palette)],
+    fold_col = find_col(view_df, ["Fold", "Fold_No"])
+    if fold_col and fold_col in view_df.columns:
+        grouped = (
+            view_df.groupby(fold_col)[[acc_col, rec_col]]
+            .mean()
+            .sort_index()
         )
-        for b, v in zip(bars, vals):
-            ax.text(
-                b.get_x() + b.get_width() / 2,
-                v + 0.8,
-                f"{v:.1f}%",
-                ha="center",
-                va="bottom",
-                fontsize=7.5,
-                fontweight="bold",
-                color="#333333",
-            )
+        x_labels = [f"Fold {int(f)}" for f in grouped.index]
+        y_acc = grouped[acc_col].to_numpy() * 100
+        y_rec = grouped[rec_col].to_numpy() * 100
+    else:
+        grouped = view_df.groupby(method_col)[[acc_col, rec_col]].mean()
+        x_labels = list(grouped.index)
+        y_acc = grouped[acc_col].to_numpy() * 100
+        y_rec = grouped[rec_col].to_numpy() * 100
 
+    x = np.arange(len(x_labels))
+    if len(x) >= 3:
+        # Interpolasi kurva halus menggunakan polinomial / cosine
+        x_smooth = np.linspace(x.min(), x.max(), 160)
+        y_acc_smooth = np.interp(x_smooth, x, y_acc)
+        y_rec_smooth = np.interp(x_smooth, x, y_rec)
+        # Haluskan dengan moving window kecil
+        kernel = np.ones(9) / 9
+        y_acc_smooth = np.convolve(
+            np.pad(y_acc_smooth, (4, 4), mode="edge"), kernel, mode="valid"
+        )
+        y_rec_smooth = np.convolve(
+            np.pad(y_rec_smooth, (4, 4), mode="edge"), kernel, mode="valid"
+        )
+    else:
+        x_smooth, y_acc_smooth, y_rec_smooth = x, y_acc, y_rec
+
+    # Garis & Area Hijau (Accuracy)
+    ax.plot(x_smooth, y_acc_smooth, color="#10b981", linewidth=2.3, label="Accuracy (%)")
+    ax.fill_between(x_smooth, y_acc_smooth, 85, color="#10b981", alpha=0.14)
+    ax.scatter(x, y_acc, color="#10b981", s=28, zorder=4)
+
+    # Garis & Area Biru (Recall Malignant)
+    ax.plot(x_smooth, y_rec_smooth, color="#2563eb", linewidth=2.3, label="Recall Malignant (%)")
+    ax.fill_between(x_smooth, y_rec_smooth, 85, color="#2563eb", alpha=0.10)
+    ax.scatter(x, y_rec, color="#2563eb", s=28, zorder=4)
+
+    min_y = max(80, min(np.min(y_acc), np.min(y_rec)) - 3.5)
+    ax.set_ylim(min_y, 100.5)
     ax.set_xticks(x)
-    ax.set_xticklabels(frame.index, fontsize=8.5, fontweight="bold", color="#333333")
-    ax.set_ylim(0, 108)
-    ax.set_ylabel("Persentase (%)", fontsize=8, color="#555555")
-    ax.tick_params(axis="y", labelsize=8, colors="#555555")
-    ax.grid(axis="y", linestyle="-", linewidth=0.5, color="#dddddd")
+    ax.set_xticklabels(x_labels, fontsize=8.5, color="#475569", fontweight="600")
+    ax.tick_params(axis="y", labelsize=8, colors="#64748b", length=0)
+    ax.tick_params(axis="x", length=0, pad=6)
+    ax.grid(axis="both", linestyle="-", linewidth=0.6, color="#f1f5f9")
     ax.set_axisbelow(True)
-    for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
-    ax.spines["left"].set_color("#cccccc")
-    ax.spines["bottom"].set_color("#cccccc")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
     ax.legend(
         loc="upper left",
+        bbox_to_anchor=(0.0, 1.15),
+        ncol=2,
         frameon=False,
-         ncol=len(avail),
-        fontsize=8,
+        fontsize=8.5,
+        handlelength=1.5,
     )
     fig.patch.set_facecolor("#ffffff")
     ax.set_facecolor("#ffffff")
-    fig.tight_layout(pad=0.8)
-    st.pyplot(fig, use_container_width=True)
-    plt.close(fig)
+    fig.tight_layout(pad=0.3)
+    return fig_to_base64(fig)
 
 
-def simrs_pie_chart(series_data, labels, colors_list, legend_title=""):
-    """Pie chart bulat dengan legenda di kanan persis gaya SIM-RS."""
-    fig, ax = plt.subplots(figsize=(6.2, 2.7), dpi=135)
-    wedges, texts, autotexts = ax.pie(
-        series_data,
-        autopct="%1.1f%%",
-        startangle=90,
-        colors=colors_list,
-        pctdistance=0.65,
-        wedgeprops={"edgecolor": "white", "linewidth": 1.2},
-        textprops={"fontsize": 8, "color": "white", "fontweight": "bold"},
+def make_donut_b64(metrics):
+    """Membuat Donut Chart dengan angka total di tengah persis 'Department-wise Patients'."""
+    fig, ax = plt.subplots(figsize=(3.0, 2.75), dpi=145)
+
+    if "Jumlah_Fitur" in metrics and metrics["Jumlah_Fitur"].notna().any():
+        s = metrics["Jumlah_Fitur"].dropna()
+        vals = s.to_numpy()
+        labels = list(s.index)
+    else:
+        vals = np.array([30, 10, 10, 12])
+        labels = ["Baseline", "SFS", "RFE", "GA"]
+
+    colors = ["#10b981", "#9333ea", "#2563eb", "#38bdf8", "#f97316"][: len(vals)]
+    ax.pie(
+        vals,
+        colors=colors,
+        startangle=140,
+        counterclock=False,
+        wedgeprops={"width": 0.36, "edgecolor": "white", "linewidth": 2},
     )
-    ax.legend(
-        wedges,
-        labels,
-        title=legend_title,
-        loc="center left",
-        bbox_to_anchor=(1.0, 0.5),
-        frameon=False,
-        fontsize=8,
-        title_fontsize=8,
+    ax.text(
+        0,
+        0.08,
+        "569",
+        ha="center",
+        va="center",
+        fontsize=17,
+        fontweight="bold",
+        color="#111c44",
+    )
+    ax.text(
+        0,
+        -0.22,
+        "Samples",
+        ha="center",
+        va="center",
+        fontsize=8.5,
+        color="#64748b",
     )
     ax.axis("equal")
     fig.patch.set_facecolor("#ffffff")
-    fig.tight_layout(pad=0.6)
-    st.pyplot(fig, use_container_width=True)
-    plt.close(fig)
+    fig.tight_layout(pad=0.1)
+    return fig_to_base64(fig), labels, vals, colors
 
 
 # --------------------------- Load data ---------------------------
@@ -616,7 +769,6 @@ if fold_df is None or fold_df.empty:
     st.error("File hasil eksperimen belum ditemukan di folder hasil_pengujian.")
     st.stop()
 
-# Normalize names and numeric columns.
 fold_df.columns = [str(c).strip() for c in fold_df.columns]
 method_col = find_col(fold_df, ["Metode", "Method", "Model"])
 if method_col is None:
@@ -641,15 +793,37 @@ if metric_map["Accuracy"] is None:
     st.error("Kolom Accuracy tidak ditemukan pada file hasil.")
     st.stop()
 
-# --------------------------- SIM-RS Olive Green Sidebar ---------------------------
+# --------------------------- Sidebar (Green Hospital Navigation) ---------------------------
 with st.sidebar:
     st.markdown(
-        """
-        <div class="simrs-side-search">
-          <span>Live Search ...</span>
-          <span>&#128269;</span>
+        f"""
+        <div class="gh-logo">
+          {SVGS['leaf']}
+          <div class="gh-logo-text">Green<br>Hospital</div>
         </div>
-        <div class="simrs-side-section">FRONT OFFICE</div>
+        <div class="gh-nav-active">
+          {SVGS['nav_home']}
+          <span>Dashboard</span>
+        </div>
+        <div class="gh-nav-item">
+          <span class="gh-nav-left">{SVGS['nav_users']} Patients (WDBC)</span>
+          <span class="gh-nav-badge">569</span>
+        </div>
+        <div class="gh-nav-item">
+          <span class="gh-nav-left">{SVGS['nav_lab']} Cytology Features</span>
+          <span class="gh-nav-badge">30</span>
+        </div>
+        <div class="gh-nav-item">
+          <span class="gh-nav-left">{SVGS['nav_records']} Validation Folds</span>
+          <span class="gh-nav-badge">5-Fold</span>
+        </div>
+        <div class="gh-nav-item">
+          <span class="gh-nav-left">{SVGS['nav_reports']} Logistic Reg.</span>
+          <span class="gh-nav-badge">L2</span>
+        </div>
+        <div style="margin: 14px 0 8px 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6ee7b7;">
+          Filter Parameters
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -663,64 +837,21 @@ with st.sidebar:
         else []
     )
     selected_seeds = (
-        st.multiselect("Filter Random Seed", all_seeds, default=all_seeds)
+        st.multiselect("Random Seeds", all_seeds, default=all_seeds)
         if all_seeds
         else []
     )
     all_methods = nice_method_order(fold_df[method_col].dropna().unique().tolist())
     selected_methods = st.multiselect(
-        "Filter Metode Seleksi", all_methods, default=all_methods
+        "Feature Selection Methods", all_methods, default=all_methods
     )
 
     st.markdown(
-        """
-        <div class="simrs-menu-list">
-          <div class="simrs-menu-item active">
-            <span>&#8962; &nbsp;Beranda Dashboard</span>
-            <span>&lsaquo;</span>
+        f"""
+        <div style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+          <div class="gh-nav-item">
+            <span class="gh-nav-left">{SVGS['nav_settings']} Group 4 · Case #8</span>
           </div>
-          <div class="simrs-menu-item">
-            <span>&#9998; &nbsp;Dataset WDBC</span>
-            <span class="simrs-menu-val">569 Sampel</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#10010; &nbsp;Pasien Malignant</span>
-            <span class="simrs-menu-val">212 Kasus</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#9877; &nbsp;Pasien Benign</span>
-            <span class="simrs-menu-val">357 Kasus</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#9883; &nbsp;Laboratorium Sitologi</span>
-            <span class="simrs-menu-val">30 Fitur</span>
-          </div>
-        </div>
-
-        <div class="simrs-side-section">BACK OFFICE</div>
-        <div class="simrs-menu-list">
-          <div class="simrs-menu-item">
-            <span>&#9776; &nbsp;Setup Estimator</span>
-            <span class="simrs-menu-val">LogReg</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#9881; &nbsp;Skema Validasi</span>
-            <span class="simrs-menu-val">5-Fold CV</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#128202; &nbsp;Total Eksperimen</span>
-            <span class="simrs-menu-val">3 Seed</span>
-          </div>
-          <div class="simrs-menu-item">
-            <span>&#128196; &nbsp;SIRS / Pelaporan</span>
-            <span>&lsaquo;</span>
-          </div>
-        </div>
-
-        <div class="simrs-user-footer">
-          <div><b>User :</b> Group 4 (Studi Kasus #8)</div>
-          <div><b>Dosen :</b> Dr. Fajar Delli Wihartiko, S.Si., MM., M.Kom.</div>
-          <div style="margin-top:4px; color:#aaaaaa;">Analisis &amp; Desain Algoritma</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -733,7 +864,7 @@ if seed_col and selected_seeds:
         pd.to_numeric(view_df[seed_col], errors="coerce").isin(selected_seeds)
     ]
 if not selected_methods:
-    st.warning("Pilih setidaknya satu metode pada panel FRONT OFFICE di sebelah kiri.")
+    st.warning("Pilih setidaknya satu metode pada panel kiri.")
     st.stop()
 view_df = view_df[view_df[method_col].isin(selected_methods)]
 
@@ -778,300 +909,258 @@ if time_df is not None and not time_df.empty:
         time_avg = time_view.groupby(time_method_col)[time_value_col].mean()
         metrics["Waktu_Seleksi_Detik"] = time_avg.reindex(metrics.index)
 
-# --------------------------- SIM-RS Top Header & Sub-bar ---------------------------
+# --------------------------- Top Bar & Welcome Row ---------------------------
 st.markdown(
-    """
-    <div class="simrs-topbar">
-      <div class="simrs-brand">
-        <span>&#127973;</span>
-        <span>SIM-RS &middot; Sistem Evaluasi Feature Selection Kanker Payudara</span>
+    f"""
+    <div class="gh-topbar">
+      <div class="gh-search-pill">
+        {SVGS['search']}
+        <span>Search methods, biomarkers, fold evaluations...</span>
       </div>
-      <div style="font-size:0.8rem; color:#dddddd;">
-        Group 4 &middot; Studi Kasus Nomor 8 &middot; Logistic Regression
+      <div class="gh-profile-area">
+        {SVGS['bell']}
+        <div class="gh-user-chip">
+          <div class="gh-user-avatar">G4</div>
+          <span>Group 4 Admin &nbsp;&or;</span>
+        </div>
       </div>
     </div>
 
-    <div class="simrs-subbar">
-      <span>&#9638; &nbsp;Dashboard Evaluasi Diagnostik - Breast Cancer Wisconsin (Diagnostic)</span>
-      <div class="win-controls">
-        <span class="win-btn">&minus;</span>
-        <span class="win-btn">&#9723;</span>
-        <span class="win-btn close">&times;</span>
+    <div class="gh-welcome-row">
+      <div>
+        <div class="gh-welcome-title">Welcome Back!</div>
+        <div class="gh-welcome-sub">Analisis Feature Selection pada Klasifikasi Kanker Payudara (Breast Cancer Wisconsin Diagnostic).</div>
+      </div>
+      <div class="gh-date-pill">
+        {SVGS['calendar']}
+        <span>3 Seeds &times; 5-Fold CV &nbsp;&or;</span>
       </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# --------------------------- 4 Colored SIM-RS KPI Boxes ---------------------------
+# --------------------------- 4 Horizontal KPI Cards (Green, Blue, Purple, Orange) ---------------------------
 k1, k2, k3, k4 = st.columns(4)
 if "Accuracy" in metrics and metrics["Accuracy"].notna().any():
     best_acc = metrics["Accuracy"].idxmax()
     with k1:
-        st.markdown(
-            f"""
-            <div class="simrs-panel">
-              <div class="simrs-panel-head head-green">
-                <span>&#9638; Akurasi Tertinggi</span>
-                <span>{best_acc}</span>
-              </div>
-              <div class="simrs-panel-body">
-                <div class="simrs-kpi-num">{metrics.loc[best_acc, 'Accuracy'] * 100:.2f}%</div>
-                <div class="simrs-kpi-sub">Rata-rata Outer Fold ({best_acc})</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        render_kpi_card(
+            icon_svg=SVGS["kpi_green"],
+            icon_bg="#e6f8f1",
+            number=f"{metrics.loc[best_acc, 'Accuracy'] * 100:.2f}%",
+            label="Highest Accuracy",
+            trend_text=f"{best_acc} Method",
+            bar_color="#10b981",
         )
 if "Recall_Malignant" in metrics and metrics["Recall_Malignant"].notna().any():
     best_recall = metrics["Recall_Malignant"].idxmax()
     with k2:
-        st.markdown(
-            f"""
-            <div class="simrs-panel">
-              <div class="simrs-panel-head head-cyan">
-                <span>&#9638; Recall Malignant</span>
-                <span>{best_recall}</span>
-              </div>
-              <div class="simrs-panel-body">
-                <div class="simrs-kpi-num">{metrics.loc[best_recall, 'Recall_Malignant'] * 100:.2f}%</div>
-                <div class="simrs-kpi-sub">Sensitivitas Kelas Positif ({best_recall})</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        render_kpi_card(
+            icon_svg=SVGS["kpi_blue"],
+            icon_bg="#e8f1ff",
+            number=f"{metrics.loc[best_recall, 'Recall_Malignant'] * 100:.2f}%",
+            label="Recall Malignant",
+            trend_text=f"{best_recall} Sensitivity",
+            bar_color="#2563eb",
         )
 if "Jumlah_Fitur" in metrics and metrics["Jumlah_Fitur"].notna().any():
     fewest_method = metrics["Jumlah_Fitur"].idxmin()
     with k3:
-        st.markdown(
-            f"""
-            <div class="simrs-panel">
-              <div class="simrs-panel-head head-orange">
-                <span>&#9638; Fitur Paling Sedikit</span>
-                <span>{fewest_method}</span>
-              </div>
-              <div class="simrs-panel-body">
-                <div class="simrs-kpi-num">{metrics.loc[fewest_method, 'Jumlah_Fitur']:.2f} Fitur</div>
-                <div class="simrs-kpi-sub">Dari 30 Fitur Sitologi Awal</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        render_kpi_card(
+            icon_svg=SVGS["kpi_purple"],
+            icon_bg="#f5ebff",
+            number=f"{metrics.loc[fewest_method, 'Jumlah_Fitur']:.0f} / 30",
+            label="Selected Features",
+            trend_text=f"-67% ({fewest_method})",
+            bar_color="#9333ea",
         )
 if "Waktu_Seleksi_Detik" in metrics and metrics["Waktu_Seleksi_Detik"].notna().any():
     times = metrics["Waktu_Seleksi_Detik"].dropna()
     if not times.empty:
         fastest = times.idxmin()
         with k4:
-            st.markdown(
-                f"""
-                <div class="simrs-panel">
-                  <div class="simrs-panel-head head-red">
-                    <span>&#9638; Seleksi Tercepat</span>
-                    <span>{fastest}</span>
-                  </div>
-                  <div class="simrs-panel-body">
-                    <div class="simrs-kpi-num">{times.loc[fastest]:.3f} dtk</div>
-                    <div class="simrs-kpi-sub">Durasi Rata-rata per Fold</div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            render_kpi_card(
+                icon_svg=SVGS["kpi_orange"],
+                icon_bg="#fff1e6",
+                number=f"{times.loc[fastest]:.3f}s",
+                label="Selection Time",
+                trend_text=f"Fastest ({fastest})",
+                bar_color="#f97316",
             )
 
-# --------------------------- Main SIM-RS 2x2 Grid (Persis Gambar Contoh) ---------------------------
-row1_left, row1_right = st.columns([1.15, 1.0])
+# --------------------------- Middle Row: Smooth Wave Chart + Donut Chart ---------------------------
+mid_left, mid_right = st.columns([1.45, 1.0])
 
-with row1_left:
-    # Panel Hijau (Persis "Tarif layanan" di kiri atas pada gambar referensi)
-    rows_html = ""
-    for idx, (m_name, row) in enumerate(metrics.iterrows(), start=1):
-        acc_txt = f"{row['Accuracy'] * 100:.2f}%" if pd.notna(row.get("Accuracy")) else "-"
-        prec_txt = (
-            f"{row['Precision_Malignant'] * 100:.2f}%"
-            if pd.notna(row.get("Precision_Malignant"))
-            else "-"
-        )
-        rec_txt = (
-            f"{row['Recall_Malignant'] * 100:.2f}%"
-            if pd.notna(row.get("Recall_Malignant"))
-            else "-"
-        )
-        f1_txt = (
-            f"{row['F1_Malignant'] * 100:.2f}%"
-            if pd.notna(row.get("F1_Malignant"))
-            else "-"
-        )
-        fitur_txt = (
-            f"{row['Jumlah_Fitur']:.1f}" if pd.notna(row.get("Jumlah_Fitur")) else "-"
-        )
-        waktu_txt = (
-            f"{row['Waktu_Seleksi_Detik']:.3f} dtk"
-            if pd.notna(row.get("Waktu_Seleksi_Detik"))
-            else "N/A"
-        )
-        rows_html += f"""
-        <tr>
-          <td>{idx}</td>
-          <td><b>{m_name.upper()}</b></td>
-          <td>{acc_txt}</td>
-          <td>{prec_txt}</td>
-          <td>{rec_txt}</td>
-          <td>{f1_txt}</td>
-          <td>{fitur_txt}</td>
-          <td>{waktu_txt}</td>
-        </tr>
-        """
-
+with mid_left:
+    wave_b64 = make_smooth_wave_b64(
+        view_df,
+        method_col,
+        metric_map["Accuracy"],
+        metric_map["Recall_Malignant"] or metric_map["Accuracy"],
+    )
     st.markdown(
         f"""
-        <div class="simrs-panel">
-          <div class="simrs-panel-head head-green">
-            <span>&#9638; &nbsp;Ringkasan Layanan Metode Feature Selection &amp; Tim Peneliti</span>
-            <div class="win-controls">
-              <span class="win-btn">&minus;</span>
-              <span class="win-btn">&#9723;</span>
-              <span class="win-btn close">&times;</span>
-            </div>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title">Model Performance Across Folds</span>
+            <span class="gh-card-dropdown">5-Fold CV &nbsp;&or;</span>
           </div>
-          <div class="simrs-panel-body">
-            <table class="simrs-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Metode Seleksi</th>
-                  <th>Accuracy</th>
-                  <th>Precision</th>
-                  <th>Recall</th>
-                  <th>F1-Score</th>
-                  <th>Fitur</th>
-                  <th>Waktu</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows_html}
-              </tbody>
-            </table>
-            <div style="margin-top: 12px;"></div>
-            <table class="simrs-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Nama Anggota Tim Peneliti (Group 4)</th>
-                  <th>NIM</th>
-                  <th>Dosen Pengampu</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>AFIFAH ZUNDATUL ISHLAH</td>
-                  <td>072926011</td>
-                  <td rowspan="4" style="vertical-align: middle; font-weight: 600;">
-                    Dr. Fajar Delli Wihartiko,<br>S.Si., MM., M.Kom.
-                  </td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>HAYKAL SAPUTRA JOBAN</td>
-                  <td>072926031</td>
-                </tr>
-                <tr>
-                  <td>3</td>
-                  <td>MUHAMMAD VICKY WAHYUDA</td>
-                  <td>0729260007</td>
-                </tr>
-                <tr>
-                  <td>4</td>
-                  <td>AFRIZAL SUBAGJA</td>
-                  <td>072926002</td>
-                </tr>
-              </tbody>
-            </table>
+          <img src="data:image/png;base64,{wave_b64}" style="width:100%; height:auto; display:block;" />
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with mid_right:
+    donut_b64, d_labels, d_vals, d_colors = make_donut_b64(metrics)
+    legend_rows_html = ""
+    for lbl, val, clr in zip(d_labels, d_vals, d_colors):
+        legend_rows_html += f"""
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:0.84rem;">
+          <span style="display:flex; align-items:center; gap:9px; color:#334155; font-weight:500;">
+            <span style="width:10px; height:10px; border-radius:50%; background:{clr}; display:inline-block;"></span>
+            {lbl}
+          </span>
+          <span style="font-weight:800; color:#111c44;">{val:.1f} Fitur</span>
+        </div>
+        """
+    st.markdown(
+        f"""
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title">Method-wise Feature Subset</span>
+          </div>
+          <div style="display:grid; grid-template-columns: 1.05fr 1fr; align-items:center; gap:10px;">
+            <div>
+              <img src="data:image/png;base64,{donut_b64}" style="width:100%; max-width:210px; margin:0 auto; display:block;" />
+            </div>
+            <div>
+              {legend_rows_html}
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:0.84rem; border-top:1px dashed #e2e8f0; margin-top:4px;">
+                <span style="display:flex; align-items:center; gap:9px; color:#334155; font-weight:500;">
+                  <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
+                  Malignant / Benign
+                </span>
+                <span style="font-weight:800; color:#111c44;">212 / 357</span>
+              </div>
+            </div>
           </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-with row1_right:
-    # Panel Biru Muda 1 (Persis "Kualifikasi karyawan" di kanan atas)
-    simrs_window_open(
-        "Distribusi Diagnosis Pasien (WDBC Dataset)",
-        color_class="head-cyan",
-        right_mode="toggle",
-    )
-    simrs_pie_chart(
-        series_data=[212, 357],
-        labels=["Malignant / Ganas (212)", "Benign / Jinak (357)"],
-        colors_list=["#dc3912", "#3366cc"],
-        legend_title="Kelas Target",
-    )
-    simrs_window_close()
+# --------------------------- Bottom Row: Method Evaluation Table + Research Team Roster ---------------------------
+bot_left, bot_right = st.columns([1.45, 1.0])
 
-    # Panel Biru Muda 2 (Persis "Karyawan per bagian" di kanan tengah)
-    simrs_window_open(
-        "Proporsi Rata-rata Fitur Terpilih per Metode",
-        color_class="head-cyan",
-        right_mode="toggle",
-    )
-    if "Jumlah_Fitur" in metrics and metrics["Jumlah_Fitur"].notna().any():
-        fitur_series = metrics["Jumlah_Fitur"].dropna()
-        simrs_pie_chart(
-            series_data=fitur_series.values,
-            labels=[f"{m} ({v:.1f} fitur)" for m, v in fitur_series.items()],
-            colors_list=["#3366cc", "#109618", "#ff9900", "#990099"][: len(fitur_series)],
-            legend_title="Metode Seleksi",
-        )
-    simrs_window_close()
+with bot_left:
+    avatar_styles = [
+        ("B", "#dbeafe", "#2563eb", "Baseline (30 Fitur)", "pill-blue"),
+        ("S", "#d1fae5", "#059669", "Optimal Accuracy", "pill-green"),
+        ("R", "#f3e8ff", "#7e22ce", "Fast Wrapper", "pill-purple"),
+        ("G", "#ffedd5", "#d97706", "Metaheuristic", "pill-orange"),
+    ]
+    table_rows = ""
+    for idx, (m_name, row) in enumerate(metrics.iterrows()):
+        av_char, av_bg, av_clr, status_lbl, pill_cls = avatar_styles[idx % len(avatar_styles)]
+        acc_v = f"{row['Accuracy'] * 100:.2f}%" if pd.notna(row.get("Accuracy")) else "—"
+        rec_v = f"{row['Recall_Malignant'] * 100:.2f}%" if pd.notna(row.get("Recall_Malignant")) else "—"
+        f1_v = f"{row['F1_Malignant'] * 100:.2f}%" if pd.notna(row.get("F1_Malignant")) else "—"
+        fit_v = f"{row['Jumlah_Fitur']:.1f} Fitur" if pd.notna(row.get("Jumlah_Fitur")) else "—"
+        time_v = f"{row['Waktu_Seleksi_Detik']:.3f}s" if pd.notna(row.get("Waktu_Seleksi_Detik")) else "0.000s"
+        table_rows += f"""
+        <tr>
+          <td>
+            <div class="gh-avatar-cell">
+              <span class="gh-mini-avatar" style="background:{av_bg}; color:{av_clr};">{av_char}</span>
+              <span>{m_name}</span>
+            </div>
+          </td>
+          <td>{acc_v}</td>
+          <td>{rec_v}</td>
+          <td>{f1_v}</td>
+          <td><span class="gh-pill {pill_cls}">{status_lbl}</span></td>
+          <td style="color:#475569; font-weight:600;">{fit_v} ({time_v})</td>
+        </tr>
+        """
 
-# --------------------------- Baris Bawah: Panel Oranye & Panel Merah ---------------------------
-row2_left, row2_right = st.columns([1.15, 1.0])
-
-with row2_left:
-    # Panel Oranye (Persis "Kunjungan pasien 2017" dengan grafik batang vertikal Biru-Merah)
-    simrs_window_open(
-        "Perbandingan Kinerja Metrik Klasifikasi (%)",
-        color_class="head-orange",
-        right_mode="controls",
+    st.markdown(
+        f"""
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title">Feature Selection Evaluation Summary</span>
+            <span class="gh-card-link">Logistic Regression</span>
+          </div>
+          <table class="gh-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Accuracy</th>
+                <th>Recall (Malignant)</th>
+                <th>F1-Score</th>
+                <th>Status</th>
+                <th>Features &amp; Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {table_rows}
+            </tbody>
+          </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    simrs_vertical_bar(
-        metrics,
-        ["Accuracy", "Recall_Malignant"],
-        "Perbandingan Accuracy dan Recall Malignant",
-    )
-    simrs_window_close()
 
-with row2_right:
-    # Panel Merah (Persis "Rawat Inap per kelas 2017" di kanan bawah)
-    simrs_window_open(
-        "Distribusi Waktu Komputasi Seleksi Fitur",
-        color_class="head-red",
-        right_mode="controls",
+with bot_right:
+    st.markdown(
+        """
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title">Research Team · Group 4</span>
+            <span class="gh-card-link">Case Study #8</span>
+          </div>
+          <div class="gh-sched-row">
+            <span class="gh-sched-time">072926011</span>
+            <span class="gh-sched-icon" style="background:#d1fae5; color:#059669;">AZ</span>
+            <span class="gh-sched-name">Afifah Zundatul Ishlah</span>
+            <span class="gh-sched-doc">Peneliti 1</span>
+          </div>
+          <div class="gh-sched-row">
+            <span class="gh-sched-time">072926031</span>
+            <span class="gh-sched-icon" style="background:#dbeafe; color:#2563eb;">HS</span>
+            <span class="gh-sched-name">Haykal Saputra Joban</span>
+            <span class="gh-sched-doc">Peneliti 2</span>
+          </div>
+          <div class="gh-sched-row">
+            <span class="gh-sched-time">0729260007</span>
+            <span class="gh-sched-icon" style="background:#f3e8ff; color:#7e22ce;">MV</span>
+            <span class="gh-sched-name">Muhammad Vicky Wahyuda</span>
+            <span class="gh-sched-doc">Peneliti 3</span>
+          </div>
+          <div class="gh-sched-row">
+            <span class="gh-sched-time">072926002</span>
+            <span class="gh-sched-icon" style="background:#fee2e2; color:#dc2626;">AS</span>
+            <span class="gh-sched-name">Afrizal Subagja</span>
+            <span class="gh-sched-doc">Peneliti 4</span>
+          </div>
+          <div class="gh-sched-row" style="background:#f8fafc; border-radius:10px; padding:10px 8px; margin-top:4px;">
+            <span class="gh-sched-time" style="color:#059669; font-weight:700;">DOSEN</span>
+            <span class="gh-sched-icon" style="background:#e0f2fe; color:#0284c7;">FD</span>
+            <span class="gh-sched-name">Dr. Fajar Delli Wihartiko, S.Si., MM., M.Kom.</span>
+            <span class="gh-sched-doc">Pengampu</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    if (
-        "Waktu_Seleksi_Detik" in metrics
-        and metrics["Waktu_Seleksi_Detik"].notna().any()
-    ):
-        waktu_valid = metrics["Waktu_Seleksi_Detik"].dropna()
-        if not waktu_valid.empty:
-            simrs_pie_chart(
-                series_data=waktu_valid.values,
-                labels=[f"{m} ({v:.3f} dtk)" for m, v in waktu_valid.items()],
-                colors_list=["#109618", "#ff9900", "#dc3912"][: len(waktu_valid)],
-                legend_title="Waktu / Fold",
-            )
-        else:
-            st.info("Pilih metode SFS, RFE, atau GA untuk melihat proporsi waktu seleksi.")
-    simrs_window_close()
 
-# --------------------------- Detail Tabs di Bagian Bawah ---------------------------
+# --------------------------- Detailed Tabs Below Main Dashboard ---------------------------
 tab_features, tab_folds, tab_about = st.tabs(
     [
-        ":material/biotech: Stabilitas Fitur Terpilih",
-        ":material/table_rows: Data Evaluasi Per Fold",
-        ":material/description: Dokumentasi & Metodologi",
+        ":material/biotech: Feature Stability Analysis",
+        ":material/table_rows: Per-Fold Evaluation Records",
+        ":material/clinical_notes: Dataset & Methodology",
     ]
 )
 
@@ -1124,48 +1213,48 @@ with tab_features:
             if counts:
                 total = len(feature_view)
                 freq = pd.DataFrame(
-                    {"Nama Fitur": list(counts.keys()), "Frekuensi Fold": list(counts.values())}
+                    {"Biomarker Feature": list(counts.keys()), "Selected Count": list(counts.values())}
                 )
-                freq["Persentase (%)"] = (freq["Frekuensi Fold"] / max(total, 1) * 100).round(2)
+                freq["Stability (%)"] = (freq["Selected Count"] / max(total, 1) * 100).round(2)
                 freq = freq.sort_values(
-                    ["Frekuensi Fold", "Nama Fitur"], ascending=[False, True]
+                    ["Selected Count", "Biomarker Feature"], ascending=[False, True]
                 ).head(20)
 
-                col_chart, col_tbl = st.columns([1.2, 1.0])
+                col_chart, col_tbl = st.columns([1.25, 1.0])
                 with col_chart:
                     fig, ax = plt.subplots(
-                        figsize=(7.5, max(3.6, min(6.8, len(freq) * 0.3))), dpi=135
+                        figsize=(7.2, max(3.6, min(6.6, len(freq) * 0.3))), dpi=140
                     )
-                    freq_plot = freq.sort_values("Frekuensi Fold", ascending=True)
+                    freq_plot = freq.sort_values("Selected Count", ascending=True)
                     ax.barh(
-                        freq_plot["Nama Fitur"],
-                        freq_plot["Frekuensi Fold"],
-                        color="#5cb85c",
-                        height=0.62,
+                        freq_plot["Biomarker Feature"],
+                        freq_plot["Selected Count"],
+                        color=METHOD_COLORS.get(chosen_feature_method, "#10b981"),
+                        height=0.6,
                     )
                     ax.set_title(
-                        f"Top 20 Fitur Terpilih — {chosen_feature_method} ({total} Fold)",
+                        f"Top 20 Most Stable Features — {chosen_feature_method} ({total} Folds)",
                         loc="left",
-                        fontsize=10,
+                        fontsize=10.5,
                         fontweight="bold",
-                        color="#333333",
+                        color="#111c44",
                         pad=10,
                     )
-                    ax.set_xlabel("Frekuensi Terpilih", color="#555555", fontsize=8.5)
-                    ax.tick_params(axis="both", labelsize=8, colors="#333333", length=0)
-                    ax.grid(axis="x", linestyle="-", linewidth=0.5, color="#dddddd")
+                    ax.set_xlabel("Selection Frequency", color="#64748b", fontsize=8.5)
+                    ax.tick_params(axis="both", labelsize=8.5, colors="#334155", length=0)
+                    ax.grid(axis="x", linestyle="-", linewidth=0.5, color="#f1f5f9")
                     ax.set_axisbelow(True)
-                    for spine in ["top", "right"]:
-                        ax.spines[spine].set_visible(False)
-                    ax.set_xlim(0, max(freq_plot["Frekuensi Fold"].max() * 1.16, 1))
-                    for i, value in enumerate(freq_plot["Frekuensi Fold"]):
+                    for spine in ax.spines.values():
+                        spine.set_visible(False)
+                    ax.set_xlim(0, max(freq_plot["Selected Count"].max() * 1.15, 1))
+                    for i, value in enumerate(freq_plot["Selected Count"]):
                         ax.text(
                             value + 0.08,
                             i,
                             f"{int(value)}/{total}",
                             va="center",
                             fontsize=8,
-                            color="#333333",
+                            color="#111c44",
                             fontweight="bold",
                         )
                     fig.patch.set_facecolor("#ffffff")
@@ -1175,13 +1264,11 @@ with tab_features:
                     plt.close(fig)
                 with col_tbl:
                     st.dataframe(
-                        freq.sort_values("Frekuensi Fold", ascending=False),
+                        freq.sort_values("Selected Count", ascending=False),
                         use_container_width=True,
                         hide_index=True,
                         height=380,
                     )
-            else:
-                st.info("Tidak ada daftar fitur yang dapat dihitung pada pilihan ini.")
 
 with tab_folds:
     fold_view = view_df.copy()
@@ -1230,51 +1317,40 @@ with tab_folds:
             height=420,
         )
         st.download_button(
-            "Unduh Data Per Fold (CSV)",
+            "Download Filtered Fold Data (CSV)",
             icon=":material/download:",
             data=fold_view[display_cols].to_csv(index=False).encode("utf-8-sig"),
-            file_name="simrs_evaluasi_per_fold.csv",
+            file_name="green_hospital_fold_evaluation.csv",
             mime="text/csv",
         )
 
 with tab_about:
-    st.markdown(
-        """
-        <table class="simrs-table">
-          <thead>
-            <tr>
-              <th style="width: 25%;">Komponen Penelitian</th>
-              <th>Spesifikasi &amp; Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>Dataset</b></td>
-              <td>Breast Cancer Wisconsin (Diagnostic) — 569 sampel biopsi (212 Malignant, 357 Benign), 30 fitur numerik sitologi.</td>
-            </tr>
-            <tr>
-              <td><b>Model Klasifikasi</b></td>
-              <td>Pipeline <code>StandardScaler</code> + <code>LogisticRegression(max_iter=5000, random_state=42)</code>.</td>
-            </tr>
-            <tr>
-              <td><b>Metode Seleksi Fitur</b></td>
-              <td>Baseline (30 fitur), Sequential Forward Selection / SFS (10 fitur), Recursive Feature Elimination / RFE (10 fitur), Genetic Algorithm / GA.</td>
-            </tr>
-            <tr>
-              <td><b>Skema Validasi</b></td>
-              <td>Stratified 5-Fold Cross-Validation yang diulang pada 3 Random Seed (21, 42, 2026) = 15 eksperimen per metode.</td>
-            </tr>
-            <tr>
-              <td><b>Catatan Interpretasi</b></td>
-              <td>Evaluasi akademik pada dataset publik. Dalam konteks deteksi kanker, metrik Recall Malignant sangat penting untuk mencegah <i>False Negative</i>.</td>
-            </tr>
-          </tbody>
-        </table>
-        """,
-        unsafe_allow_html=True,
-    )
-    with st.expander("Diagnostik Sumber File CSV"):
-        st.write("Folder hasil:", str(RESULT_DIR))
-        st.write("Data per fold:", str(fold_path) if fold_path else "Tidak ditemukan")
-        st.write("Data waktu:", str(time_path) if time_path else "Tidak ditemukan")
-        st.write("Data fitur:", str(feature_path) if feature_path else "Tidak ditemukan")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(
+            """
+            <div style="padding: 8px 4px;">
+              <h4 style="color:#111c44; margin-top:0;">Breast Cancer Wisconsin (Diagnostic)</h4>
+              <p style="color:#475569; font-size:0.88rem; line-height:1.6;">
+                Dataset klinis hasil digitasi aspirasi jarum halus (FNA) massa payudara yang mencakup
+                <b>569 pasien</b> (212 <i>Malignant</i> / Ganas dan 357 <i>Benign</i> / Jinak) dengan
+                <b>30 fitur morfologi inti sel</b>.
+              </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_b:
+        st.markdown(
+            """
+            <div style="padding: 8px 4px;">
+              <h4 style="color:#111c44; margin-top:0;">Validation Protocol &amp; Algorithms</h4>
+              <p style="color:#475569; font-size:0.88rem; line-height:1.6;">
+                Menggunakan pipeline <code>StandardScaler</code> + <code>LogisticRegression</code> yang dievaluasi
+                dengan <b>Stratified 5-Fold Cross-Validation</b> pada 3 Random Seed (21, 42, 2026) untuk membandingkan
+                <b>Baseline</b>, <b>SFS</b>, <b>RFE</b>, dan <b>Genetic Algorithm</b>.
+              </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

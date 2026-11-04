@@ -143,14 +143,24 @@ st.markdown(
       }
 
       /* Perbaiki kontras tag <code> agar jelas dan tidak berlatar abu-abu gelap */
-      .stApp code {
-        background-color: #ecfdf5 !important;
-        color: #047857 !important;
-        border: 1px solid #a7f3d0 !important;
+      .stApp code, [data-testid="stMarkdownContainer"] code {
+        background-color: #dcfce7 !important;
+        color: #065f46 !important;
+        border: 1px solid #86efac !important;
         padding: 2px 7px !important;
         border-radius: 6px !important;
         font-weight: 700 !important;
         font-size: 0.82rem !important;
+      }
+      .gh-code-badge {
+        background-color: #dcfce7;
+        color: #065f46;
+        border: 1px solid #86efac;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.82rem;
       }
       .gh-nav-active {
         display: flex;
@@ -1355,14 +1365,14 @@ with tab_about:
     with col_b:
         st.markdown(
             """
-            <div style="padding: 8px 4px;">
-              <h4 style="color:#111c44; margin-top:0;">Validation Protocol &amp; Algorithms</h4>
-              <p style="color:#475569; font-size:0.88rem; line-height:1.6;">
-                Menggunakan pipeline <code>StandardScaler</code> + <code>LogisticRegression</code> yang dievaluasi
-                dengan <b>Stratified 5-Fold Cross-Validation</b> pada 3 Random Seed (21, 42, 2026) untuk membandingkan
-                <b>Baseline</b>, <b>SFS</b>, <b>RFE</b>, dan <b>Genetic Algorithm</b>.
-              </p>
-            </div>
+      <div style="padding: 8px 4px;">
+        <h4 style="color:#111c44; margin-top:0;">Validation Protocol &amp; Algorithms</h4>
+        <p style="color:#334155; font-size:0.88rem; line-height:1.65;">
+          Menggunakan pipeline <span class="gh-code-badge">StandardScaler</span> + <span class="gh-code-badge">LogisticRegression</span> yang dievaluasi
+          dengan <b>Stratified 5-Fold Cross-Validation</b> pada 3 Random Seed (21, 42, 2026) untuk membandingkan
+          <b>Baseline</b>, <b>SFS</b>, <b>RFE</b>, dan <b>Genetic Algorithm</b>.
+        </p>
+      </div>
             """,
             unsafe_allow_html=True,
         )

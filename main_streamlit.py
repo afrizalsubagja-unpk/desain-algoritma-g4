@@ -132,14 +132,25 @@ st.markdown(
       .gh-logo {
         display: flex;
         align-items: center;
-        gap: 11px;
-        padding: 4px 6px 20px 6px;
+        justify-content: flex-start;
+        padding: 4px 6px 18px 6px;
       }
-      .gh-logo-text {
-        font-size: 1.2rem;
-        font-weight: 800;
-        color: #ffffff;
-        line-height: 1.15;
+      .gh-logo img {
+        max-width: 195px;
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+      }
+
+      /* Perbaiki kontras tag <code> agar jelas dan tidak berlatar abu-abu gelap */
+      .stApp code {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+        border: 1px solid #a7f3d0 !important;
+        padding: 2px 7px !important;
+        border-radius: 6px !important;
+        font-weight: 700 !important;
+        font-size: 0.82rem !important;
       }
       .gh-nav-active {
         display: flex;
@@ -812,13 +823,12 @@ if metric_map["Accuracy"] is None:
     st.error("Kolom Accuracy tidak ditemukan pada file hasil.")
     st.stop()
 
-# --------------------------- Sidebar (Green Hospital Navigation) ---------------------------
+# --------------------------- Sidebar (UNPAK Navigation) ---------------------------
 with st.sidebar:
     st.markdown(
         f"""
         <div class="gh-logo">
-          {SVGS['leaf']}
-          <div class="gh-logo-text">Green<br>Hospital</div>
+          <img src="https://www.unpak.ac.id/images/logo-unpak_menu_web.png" alt="Logo Universitas Pakuan" />
         </div>
         <div class="gh-nav-active">
           {SVGS['nav_home']}

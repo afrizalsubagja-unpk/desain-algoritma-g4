@@ -129,26 +129,29 @@ st.markdown(
         fill: #065f46 !important;
       }
 
-      .gh-logo {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 4px 8px 16px 8px;
+      .gh-logo, [data-testid="stSidebar"] .gh-logo {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        padding: 4px 8px 16px 8px !important;
       }
-      .gh-logo img {
-        width: 72px;
-        height: auto;
-        display: block;
-        margin: 0 auto 8px auto;
+      .gh-logo img, [data-testid="stSidebar"] .gh-logo img {
+        width: 68px !important;
+        max-width: 68px !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto 8px auto !important;
         filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
       }
       .gh-logo-title {
-        font-size: 0.82rem;
-        font-weight: 700;
-        color: #ffffff;
-        line-height: 1.35;
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
+        line-height: 1.35 !important;
+        text-align: center !important;
       }
 
       /* Perbaiki kontras tag <code> agar jelas dan tidak berlatar abu-abu gelap */
@@ -846,9 +849,9 @@ if metric_map["Accuracy"] is None:
 with st.sidebar:
     st.markdown(
         f"""
-        <div class="gh-logo">
-          <img src="https://www.unpak.ac.id/images/logo-unpak_menu_web.png" alt="Logo Universitas Pakuan" />
-          <div class="gh-logo-title">Analisis Feature Selection<br>Klasifikasi Kanker Payudara</div>
+        <div class="gh-logo" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; width:100%; padding:4px 8px 16px 8px;">
+          <img src="https://www.unpak.ac.id/images/logo-unpak_menu_web.png" alt="Logo Universitas Pakuan" style="width:68px; max-width:68px; height:auto; display:block; margin:0 auto 8px auto;" />
+          <div class="gh-logo-title" style="font-size:0.82rem; font-weight:700; color:#ffffff; line-height:1.35; text-align:center;">Analisis Feature Selection<br>Klasifikasi Kanker Payudara</div>
         </div>
         <div class="gh-nav-active">
           {SVGS['nav_home']}

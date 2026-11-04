@@ -928,8 +928,8 @@ st.markdown(
 
     <div class="gh-welcome-row">
       <div>
-        <div class="gh-welcome-title">Welcome Back!</div>
-        <div class="gh-welcome-sub">Analisis Feature Selection pada Klasifikasi Kanker Payudara (Breast Cancer Wisconsin Diagnostic).</div>
+        <div class="gh-welcome-title">Analisis Feature Selection pada Klasifikasi Kanker Payudara</div>
+        <div class="gh-welcome-sub">Perbandingan Baseline, SFS, RFE, dan Genetic Algorithm dengan Logistic Regression &middot; Group 4 (Studi Kasus Nomor 8).</div>
       </div>
       <div class="gh-date-pill">
         {SVGS['calendar']}

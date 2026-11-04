@@ -1014,40 +1014,27 @@ with mid_left:
 
 with mid_right:
     donut_b64, d_labels, d_vals, d_colors = make_donut_b64(metrics)
-    legend_rows_html = ""
-    for lbl, val, clr in zip(d_labels, d_vals, d_colors):
-        legend_rows_html += f"""
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:0.84rem;">
-          <span style="display:flex; align-items:center; gap:9px; color:#334155; font-weight:500;">
-            <span style="width:10px; height:10px; border-radius:50%; background:{clr}; display:inline-block;"></span>
-            {lbl}
-          </span>
-          <span style="font-weight:800; color:#111c44;">{val:.1f} Fitur</span>
-        </div>
-        """
+    legend_rows_html = "".join(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:0.84rem;">'
+        f'<span style="display:flex;align-items:center;gap:9px;color:#334155;font-weight:500;">'
+        f'<span style="width:10px;height:10px;border-radius:50%;background:{clr};display:inline-block;"></span>'
+        f"{lbl}</span>"
+        f'<span style="font-weight:800;color:#111c44;">{val:.1f} Fitur</span>'
+        f"</div>"
+        for lbl, val, clr in zip(d_labels, d_vals, d_colors)
+    )
     st.markdown(
-        f"""
-        <div class="gh-card">
-          <div class="gh-card-header">
-            <span class="gh-card-title">Method-wise Feature Subset</span>
-          </div>
-          <div style="display:grid; grid-template-columns: 1.05fr 1fr; align-items:center; gap:10px;">
-            <div>
-              <img src="data:image/png;base64,{donut_b64}" style="width:100%; max-width:210px; margin:0 auto; display:block;" />
-            </div>
-            <div>
-              {legend_rows_html}
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:0.84rem; border-top:1px dashed #e2e8f0; margin-top:4px;">
-                <span style="display:flex; align-items:center; gap:9px; color:#334155; font-weight:500;">
-                  <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
-                  Malignant / Benign
-                </span>
-                <span style="font-weight:800; color:#111c44;">212 / 357</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        """,
+        f'<div class="gh-card">'
+        f'<div class="gh-card-header"><span class="gh-card-title">Method-wise Feature Subset</span></div>'
+        f'<div style="display:grid;grid-template-columns:1.05fr 1fr;align-items:center;gap:10px;">'
+        f'<div><img src="data:image/png;base64,{donut_b64}" style="width:100%;max-width:210px;margin:0 auto;display:block;" /></div>'
+        f"<div>{legend_rows_html}"
+        f'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:0.84rem;border-top:1px dashed #e2e8f0;margin-top:4px;">'
+        f'<span style="display:flex;align-items:center;gap:9px;color:#334155;font-weight:500;">'
+        f'<span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>'
+        f"Malignant / Benign</span>"
+        f'<span style="font-weight:800;color:#111c44;">212 / 357</span>'
+        f"</div></div></div></div>",
         unsafe_allow_html=True,
     )
 
@@ -1069,46 +1056,32 @@ with bot_left:
         f1_v = f"{row['F1_Malignant'] * 100:.2f}%" if pd.notna(row.get("F1_Malignant")) else "—"
         fit_v = f"{row['Jumlah_Fitur']:.1f} Fitur" if pd.notna(row.get("Jumlah_Fitur")) else "—"
         time_v = f"{row['Waktu_Seleksi_Detik']:.3f}s" if pd.notna(row.get("Waktu_Seleksi_Detik")) else "0.000s"
-        table_rows += f"""
-        <tr>
-          <td>
-            <div class="gh-avatar-cell">
-              <span class="gh-mini-avatar" style="background:{av_bg}; color:{av_clr};">{av_char}</span>
-              <span>{m_name}</span>
-            </div>
-          </td>
-          <td>{acc_v}</td>
-          <td>{rec_v}</td>
-          <td>{f1_v}</td>
-          <td><span class="gh-pill {pill_cls}">{status_lbl}</span></td>
-          <td style="color:#475569; font-weight:600;">{fit_v} ({time_v})</td>
-        </tr>
-        """
+        table_rows += (
+            f"<tr>"
+            f'<td><div class="gh-avatar-cell">'
+            f'<span class="gh-mini-avatar" style="background:{av_bg};color:{av_clr};">{av_char}</span>'
+            f"<span>{m_name}</span></div></td>"
+            f"<td>{acc_v}</td>"
+            f"<td>{rec_v}</td>"
+            f"<td>{f1_v}</td>"
+            f'<td><span class="gh-pill {pill_cls}">{status_lbl}</span></td>'
+            f'<td style="color:#475569;font-weight:600;">{fit_v} ({time_v})</td>'
+            f"</tr>"
+        )
 
     st.markdown(
-        f"""
-        <div class="gh-card">
-          <div class="gh-card-header">
-            <span class="gh-card-title">Feature Selection Evaluation Summary</span>
-            <span class="gh-card-link">Logistic Regression</span>
-          </div>
-          <table class="gh-table">
-            <thead>
-              <tr>
-                <th>Method</th>
-                <th>Accuracy</th>
-                <th>Recall (Malignant)</th>
-                <th>F1-Score</th>
-                <th>Status</th>
-                <th>Features &amp; Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {table_rows}
-            </tbody>
-          </table>
-        </div>
-        """,
+        f'<div class="gh-card">'
+        f'<div class="gh-card-header">'
+        f'<span class="gh-card-title">Feature Selection Evaluation Summary</span>'
+        f'<span class="gh-card-link">Logistic Regression</span>'
+        f"</div>"
+        f'<table class="gh-table">'
+        f"<thead><tr>"
+        f"<th>Method</th><th>Accuracy</th><th>Recall (Malignant)</th>"
+        f"<th>F1-Score</th><th>Status</th><th>Features &amp; Time</th>"
+        f"</tr></thead>"
+        f"<tbody>{table_rows}</tbody>"
+        f"</table></div>",
         unsafe_allow_html=True,
     )
 
